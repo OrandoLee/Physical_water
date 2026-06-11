@@ -6,7 +6,7 @@ import { ObjectKind } from '../objects/ObjectTypes'
 import { ActivationOverlay } from '../ui/ActivationOverlay'
 import { Hud } from '../ui/Hud'
 import { InventoryBar } from '../ui/InventoryBar'
-import { TANK } from '../utils/constants'
+import { TANK, WATER } from '../utils/constants'
 import { screenToNdc } from '../utils/math'
 import { WaterSurface } from '../water/WaterSurface'
 import { CameraController } from './CameraController'
@@ -29,6 +29,7 @@ export class SceneApp {
   private readonly overlay: ActivationOverlay
   private readonly inventory: InventoryBar
   private readonly objects: FloatingObject[] = []
+  private waterVolume?: THREE.Mesh
 
   private waterDragging = false
   private paused = false
@@ -88,10 +89,11 @@ export class SceneApp {
     }
 
     this.cameraController.update(deltaTime)
-    this.water.update(deltaTime)
     for (const object of this.objects) {
       object.update(deltaTime, this.water)
     }
+    this.updateDisplacedWaterLevel(deltaTime)
+    this.water.update(deltaTime)
     this.composer.render()
   }
 
@@ -173,7 +175,7 @@ export class SceneApp {
     wallGroup.add(outline)
     this.scene.add(wallGroup)
 
-    const waterVolume = new THREE.Mesh(
+    this.waterVolume = new THREE.Mesh(
       new THREE.BoxGeometry(TANK.width - 0.1, TANK.waterLevel - 0.03, TANK.depth - 0.1),
       new THREE.MeshPhysicalMaterial({
         color: 0x0b8daf,
@@ -184,8 +186,8 @@ export class SceneApp {
         depthWrite: false,
       }),
     )
-    waterVolume.position.y = TANK.waterLevel * 0.5
-    this.scene.add(waterVolume)
+    this.waterVolume.position.y = TANK.waterLevel * 0.5
+    this.scene.add(this.waterVolume)
   }
 
   private bindEvents(): void {
@@ -287,6 +289,7 @@ export class SceneApp {
     const synthetic = { clientX, clientY } as MouseEvent
     screenToNdc(synthetic, this.renderer.domElement, this.pointer)
     this.raycaster.setFromCamera(this.pointer, this.camera)
+    this.dropPlane.constant = -this.water.level
     const validScreenPoint =
       clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom
 
@@ -296,7 +299,7 @@ export class SceneApp {
     const object = createFloatingObject(kind)
     object.mesh.position.set(
       THREE.MathUtils.clamp(x, -TANK.width * 0.38, TANK.width * 0.38),
-      TANK.waterLevel + 1.25,
+      this.water.level + 1.25,
       THREE.MathUtils.clamp(z, -TANK.depth * 0.36, TANK.depth * 0.36),
     )
     this.objects.push(object)
@@ -305,11 +308,42 @@ export class SceneApp {
 
   private reset(): void {
     this.water.reset()
+    this.updateWaterVolumeMesh(TANK.waterLevel)
     for (const object of this.objects) {
       this.scene.remove(object.mesh)
       object.dispose()
     }
     this.objects.length = 0
+  }
+
+  private updateDisplacedWaterLevel(deltaTime: number): void {
+    let displacedVolume = 0
+    for (const object of this.objects) {
+      displacedVolume += object.getDisplacedVolume(this.water.level)
+    }
+
+    const waterArea = TANK.width * TANK.depth
+    const targetRise = THREE.MathUtils.clamp(
+      (displacedVolume / waterArea) * WATER.displacementScale,
+      0,
+      WATER.maxLevelRise,
+    )
+    const targetLevel = TANK.waterLevel + targetRise
+    const smoothing = 1 - Math.exp(-deltaTime * 2.8)
+    const nextLevel = THREE.MathUtils.lerp(this.water.level, targetLevel, smoothing)
+    this.water.setLevel(nextLevel)
+    this.updateWaterVolumeMesh(nextLevel)
+  }
+
+  private updateWaterVolumeMesh(level: number): void {
+    if (!this.waterVolume) {
+      return
+    }
+
+    const baseHeight = TANK.waterLevel - 0.03
+    const height = Math.max(0.05, level - 0.03)
+    this.waterVolume.scale.y = height / baseHeight
+    this.waterVolume.position.y = height * 0.5
   }
 
   private resize(): void {

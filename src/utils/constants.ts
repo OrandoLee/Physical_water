@@ -14,6 +14,8 @@ export const WATER = {
   propagation: 0.43,
   idleWave: 0.007,
   maxHeight: 0.22,
+  displacementScale: 2.4,
+  maxLevelRise: 0.46,
 }
 
 export const CAMERA = {

@@ -13,6 +13,7 @@ export class WaterSurface {
   private readonly next: Float32Array
   private readonly positions: THREE.BufferAttribute
   private time = 0
+  private baseLevel = TANK.waterLevel
 
   constructor() {
     const geometry = new THREE.PlaneGeometry(
@@ -46,6 +47,15 @@ export class WaterSurface {
 
     this.writeGeometry()
     this.mesh.material.uniforms.time.value = this.time
+  }
+
+  get level(): number {
+    return this.baseLevel
+  }
+
+  setLevel(level: number): void {
+    this.baseLevel = clamp(level, TANK.waterLevel, TANK.waterLevel + WATER.maxLevelRise)
+    this.mesh.position.y = this.baseLevel
   }
 
   disturb(worldX: number, worldZ: number, strength: number, radius: number): void {
@@ -90,7 +100,7 @@ export class WaterSurface {
     const h10 = this.current[this.index(x1, z0)]
     const h01 = this.current[this.index(x0, z1)]
     const h11 = this.current[this.index(x1, z1)]
-    return TANK.waterLevel + lerp(lerp(h00, h10, tx), lerp(h01, h11, tx), tz)
+    return this.baseLevel + lerp(lerp(h00, h10, tx), lerp(h01, h11, tx), tz)
   }
 
   getVelocityAt(worldX: number, worldZ: number): number {
@@ -104,6 +114,7 @@ export class WaterSurface {
     this.current.fill(0)
     this.previous.fill(0)
     this.next.fill(0)
+    this.setLevel(TANK.waterLevel)
     this.writeGeometry()
   }
 

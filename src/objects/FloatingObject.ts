@@ -106,6 +106,14 @@ export class FloatingObject {
     this.wasAboveWater = !inWater
   }
 
+  getDisplacedVolume(waterLevel: number): number {
+    const radius = this.definition.radius
+    const submergedDepth = waterLevel - (this.mesh.position.y - radius)
+    const submergedRatio = clamp(submergedDepth / (radius * 2), 0, 1)
+    const approximateVolume = (4 / 3) * Math.PI * radius ** 3
+    return approximateVolume * submergedRatio
+  }
+
   dispose(): void {
     this.mesh.traverse((child) => {
       const mesh = child as THREE.Mesh
