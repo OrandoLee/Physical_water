@@ -34,16 +34,18 @@ npm run preview
 The project is configured for the repository path:
 
 ```ts
-base: '/Physical_water/'
+base: './'
 ```
 
-That matches:
+Relative assets work both on GitHub Pages project URLs and when opening the built file directly:
 
 ```txt
 https://orandolee.github.io/Physical_water/
 ```
 
-If you rename the repository, change `base` in `vite.config.ts` to the new repository path. If deploying to a root domain, Vercel, or Netlify root path, change it to:
+If you want to open a file directly from disk, build first and then open `dist/index.html`. The root `index.html` is the Vite source entry and should be opened through `npm run dev`.
+
+If deploying to a root domain, Vercel, or Netlify root path, you may change it to:
 
 ```ts
 base: '/'
