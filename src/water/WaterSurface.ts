@@ -54,7 +54,7 @@ export class WaterSurface {
   }
 
   setLevel(level: number): void {
-    this.baseLevel = clamp(level, TANK.waterLevel, TANK.waterLevel + WATER.maxLevelRise)
+    this.baseLevel = clamp(level, TANK.waterLevel, TANK.height - WATER.overflowMargin)
     this.mesh.position.y = this.baseLevel
   }
 

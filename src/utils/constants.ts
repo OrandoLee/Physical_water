@@ -15,7 +15,8 @@ export const WATER = {
   idleWave: 0.007,
   maxHeight: 0.22,
   displacementScale: 2.4,
-  maxLevelRise: 0.46,
+  overflowMargin: 0.08,
+  overflowVisualDepth: 0.72,
 }
 
 export const CAMERA = {

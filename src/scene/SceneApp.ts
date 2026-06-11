@@ -33,6 +33,10 @@ export class SceneApp {
   private readonly inventory: InventoryBar
   private readonly objects: FloatingObject[] = []
   private waterVolume?: THREE.Mesh
+  private overflowGroup?: THREE.Group
+  private overflowPuddle?: THREE.Mesh
+  private readonly overflowSheets: THREE.Mesh[] = []
+  private overflowDepth = 0
 
   private waterDragging = false
   private paused = false
@@ -192,6 +196,54 @@ export class SceneApp {
     )
     this.waterVolume.position.y = TANK.waterLevel * 0.5
     this.scene.add(this.waterVolume)
+
+    this.addOverflowVisuals()
+  }
+
+  private addOverflowVisuals(): void {
+    this.overflowGroup = new THREE.Group()
+    this.overflowGroup.visible = false
+
+    const sheetMaterial = new THREE.MeshPhysicalMaterial({
+      color: 0x74ecff,
+      transparent: true,
+      opacity: 0,
+      roughness: 0.06,
+      transmission: 0.28,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+    })
+
+    const sheetData: Array<{ width: number; x: number; z: number; rotationY: number }> = [
+      { width: TANK.width, x: 0, z: TANK.depth * 0.5 + 0.04, rotationY: 0 },
+      { width: TANK.width, x: 0, z: -TANK.depth * 0.5 - 0.04, rotationY: 0 },
+      { width: TANK.depth, x: TANK.width * 0.5 + 0.04, z: 0, rotationY: Math.PI * 0.5 },
+      { width: TANK.depth, x: -TANK.width * 0.5 - 0.04, z: 0, rotationY: Math.PI * 0.5 },
+    ]
+
+    for (const data of sheetData) {
+      const sheet = new THREE.Mesh(new THREE.PlaneGeometry(1, 1, 18, 6), sheetMaterial.clone())
+      sheet.position.set(data.x, TANK.height - WATER.overflowMargin, data.z)
+      sheet.rotation.y = data.rotationY
+      sheet.scale.set(data.width, 0.001, 1)
+      this.overflowSheets.push(sheet)
+      this.overflowGroup.add(sheet)
+    }
+
+    this.overflowPuddle = new THREE.Mesh(
+      new THREE.RingGeometry(2.4, 4.8, 72),
+      new THREE.MeshBasicMaterial({
+        color: 0x3fdcff,
+        transparent: true,
+        opacity: 0,
+        depthWrite: false,
+        side: THREE.DoubleSide,
+      }),
+    )
+    this.overflowPuddle.rotation.x = -Math.PI * 0.5
+    this.overflowPuddle.position.y = 0.012
+    this.overflowGroup.add(this.overflowPuddle)
+    this.scene.add(this.overflowGroup)
   }
 
   private bindEvents(): void {
@@ -314,6 +366,7 @@ export class SceneApp {
   private reset(): void {
     this.water.reset()
     this.updateWaterVolumeMesh(TANK.waterLevel)
+    this.updateOverflowVisuals(0, 1)
     for (const object of this.objects) {
       this.scene.remove(object.mesh)
       object.dispose()
@@ -414,16 +467,15 @@ export class SceneApp {
     }
 
     const waterArea = TANK.width * TANK.depth
-    const targetRise = THREE.MathUtils.clamp(
-      (displacedVolume / waterArea) * WATER.displacementScale,
-      0,
-      WATER.maxLevelRise,
-    )
-    const targetLevel = TANK.waterLevel + targetRise
+    const targetLevelRaw = TANK.waterLevel + (displacedVolume / waterArea) * WATER.displacementScale
+    const overflowLevel = TANK.height - WATER.overflowMargin
+    const targetLevel = Math.min(targetLevelRaw, overflowLevel)
+    const targetOverflowDepth = Math.max(0, targetLevelRaw - overflowLevel)
     const smoothing = 1 - Math.exp(-deltaTime * 2.8)
     const nextLevel = THREE.MathUtils.lerp(this.water.level, targetLevel, smoothing)
     this.water.setLevel(nextLevel)
     this.updateWaterVolumeMesh(nextLevel)
+    this.updateOverflowVisuals(targetOverflowDepth, deltaTime)
   }
 
   private updateWaterVolumeMesh(level: number): void {
@@ -435,6 +487,33 @@ export class SceneApp {
     const height = Math.max(0.05, level - 0.03)
     this.waterVolume.scale.y = height / baseHeight
     this.waterVolume.position.y = height * 0.5
+  }
+
+  private updateOverflowVisuals(targetOverflowDepth: number, deltaTime: number): void {
+    if (!this.overflowGroup) {
+      return
+    }
+
+    const smoothing = deltaTime >= 1 ? 1 : 1 - Math.exp(-deltaTime * 5.5)
+    this.overflowDepth = THREE.MathUtils.lerp(this.overflowDepth, targetOverflowDepth, smoothing)
+    const intensity = THREE.MathUtils.clamp(this.overflowDepth / WATER.overflowVisualDepth, 0, 1)
+    this.overflowGroup.visible = intensity > 0.01
+
+    const fallLength = THREE.MathUtils.lerp(0.08, WATER.overflowVisualDepth, intensity)
+    const sheetOpacity = 0.05 + intensity * 0.28
+    const sheetY = TANK.height - WATER.overflowMargin - fallLength * 0.5
+    for (const sheet of this.overflowSheets) {
+      sheet.position.y = sheetY
+      sheet.scale.y = fallLength
+      const material = sheet.material as THREE.Material & { opacity: number }
+      material.opacity = sheetOpacity
+    }
+
+    if (this.overflowPuddle) {
+      this.overflowPuddle.scale.setScalar(0.8 + intensity * 0.75)
+      const material = this.overflowPuddle.material as THREE.Material & { opacity: number }
+      material.opacity = intensity * 0.18
+    }
   }
 
   private resize(): void {
