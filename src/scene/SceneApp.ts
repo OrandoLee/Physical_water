@@ -67,7 +67,7 @@ export class SceneApp {
 
     this.cameraController = new CameraController(this.camera, this.renderer.domElement)
     this.composer = createPostProcessing(this.renderer, this.scene, this.camera)
-    this.overlay = new ActivationOverlay(root, () => this.activate())
+    this.overlay = new ActivationOverlay(root, () => this.activate(), () => this.reset())
     this.overlay.setEmbedMode(this.isEmbed)
     new Hud(root, this.isEmbed)
     this.inventory = new InventoryBar(root, (kind, x, y) => this.dropObject(kind, x, y))
