@@ -7,8 +7,8 @@ export class ActivationOverlay {
     this.element.className = 'activation-overlay'
     this.element.type = 'button'
     this.element.innerHTML = `
-      <span class="activation-title">Click to activate sandbox</span>
-      <span class="activation-subtitle">WASD move · drag water · drop objects</span>
+      <span class="activation-title">点击进入水体沙盒</span>
+      <span class="activation-subtitle">WASD 移动 · 拖动水面 · 投放物体</span>
     `
     this.element.addEventListener('click', () => this.activate())
     root.appendChild(this.element)

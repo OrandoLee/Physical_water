@@ -17,8 +17,8 @@ export interface ObjectDefinition {
 export const OBJECT_DEFINITIONS: ObjectDefinition[] = [
   {
     kind: 'wood',
-    label: 'Wood Ball',
-    icon: 'WB',
+    label: '木球',
+    icon: '木',
     mass: 0.7,
     density: 0.55,
     buoyancy: 17,
@@ -30,8 +30,8 @@ export const OBJECT_DEFINITIONS: ObjectDefinition[] = [
   },
   {
     kind: 'metal',
-    label: 'Metal Ball',
-    icon: 'MB',
+    label: '金属球',
+    icon: '金',
     mass: 3.4,
     density: 4.8,
     buoyancy: 4.3,
@@ -43,8 +43,8 @@ export const OBJECT_DEFINITIONS: ObjectDefinition[] = [
   },
   {
     kind: 'glass',
-    label: 'Glass Block',
-    icon: 'GB',
+    label: '玻璃块',
+    icon: '玻',
     mass: 1.4,
     density: 1.35,
     buoyancy: 8.2,
@@ -56,8 +56,8 @@ export const OBJECT_DEFINITIONS: ObjectDefinition[] = [
   },
   {
     kind: 'buoy',
-    label: 'Yellow Buoy',
-    icon: 'YB',
+    label: '黄色浮标',
+    icon: '浮',
     mass: 0.45,
     density: 0.58,
     buoyancy: 9,
@@ -69,8 +69,8 @@ export const OBJECT_DEFINITIONS: ObjectDefinition[] = [
   },
   {
     kind: 'rock',
-    label: 'Heavy Rock',
-    icon: 'RK',
+    label: '重石块',
+    icon: '石',
     mass: 4.1,
     density: 5.8,
     buoyancy: 3.2,

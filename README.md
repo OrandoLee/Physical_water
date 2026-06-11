@@ -1,67 +1,96 @@
-# Physical Water Sandbox
+# 3D 水体沙盒
 
-An embeddable Three.js water sandbox built for GitHub Pages and iframe use. The demo presents a transparent laboratory tank, an interactive height-field water surface, WASD camera movement, mouse-driven ripples, and draggable objects with simplified buoyancy.
+一个可运行、可部署、可 iframe 嵌入的 Three.js 3D 水体沙盒 Demo。场景包含透明玻璃水箱、可交互水面、简化浮力与碰撞、物体投放、水位上升和溢出效果，适合作为个人网站里的 LAB / Demo 展示项目。
 
-## Features
+## 功能特性
 
-- Vite + TypeScript + Three.js app
-- Transparent glass tank with shadows, edge highlights, and water volume
-- Dynamic water mesh with local impulses, propagation, damping, normals, and height queries
-- Mouse click and drag ripples, with stronger Shift + click disturbances
-- WASD camera movement, mouse look, wheel zoom, and activation overlay for iframe safety
-- Bottom inventory bar with wood ball, metal ball, glass block, yellow buoy, and heavy rock
-- Simplified gravity, buoyancy, drag, boundary collision, sink/float behavior, and water impact impulses
-- Standalone mode and compact `?embed=1` iframe mode
-- `postMessage` hooks for pause, resume, reset, and ready events
-- GitHub Actions workflow for GitHub Pages deployment
+- Vite + TypeScript + Three.js
+- 透明玻璃水箱、蓝绿色水体、光照、阴影和轻微 Bloom
+- 可交互水面高度场：点击、拖拽、物体入水都会产生波纹
+- WASD 移动视角，鼠标拖动观察方向，滚轮调节距离
+- 底部物品栏：木球、金属球、玻璃块、黄色浮标、重石块
+- 简化物理：重力、浮力、阻尼、沉浮、边界约束、物体碰撞
+- 多物体排水导致整体水位上升，达到水箱口沿后出现溢出效果
+- 支持独立页面和 `?embed=1` 嵌入模式
+- 预留 `postMessage` 控制接口：暂停、恢复、重置、加载完成
+- GitHub Actions 自动构建并发布到 GitHub Pages
 
-## Local Development
+## 本地运行
 
 ```bash
 npm install
 npm run dev
 ```
 
-## Build
+开发服务器启动后，打开终端中显示的本地地址即可。
+
+## 构建与预览
 
 ```bash
 npm run build
 npm run preview
 ```
 
-## GitHub Pages
+如果要直接双击文件预览，请先运行：
 
-The project is configured for the repository path:
+```bash
+npm run build
+```
+
+然后打开：
+
+```txt
+dist/index.html
+```
+
+仓库根目录的 `index.html` 是 Vite 源码入口，直接双击时只会显示提示页；正式 Demo 请通过 `npm run dev` 或 `dist/index.html` 打开。
+
+## GitHub Pages 部署
+
+当前 `vite.config.ts` 使用：
 
 ```ts
 base: './'
 ```
 
-Relative assets work both on GitHub Pages project URLs and when opening the built file directly:
+相对资源路径既适合 GitHub Pages 项目子路径，也适合本地直接打开 `dist/index.html`。
+
+线上地址通常是：
 
 ```txt
 https://orandolee.github.io/Physical_water/
 ```
 
-If you want to open a file directly from disk, build first and then open `dist/index.html`. The root `index.html` is the Vite source entry and should be opened through `npm run dev`.
-
-If deploying to a root domain, Vercel, or Netlify root path, you may change it to:
+如果部署到根域名、Vercel 或 Netlify 根路径，也可以改为：
 
 ```ts
 base: '/'
 ```
 
-The included workflow at `.github/workflows/deploy.yml` builds on every push to `main` and publishes `dist` with the official GitHub Pages actions.
+仓库内置 `.github/workflows/deploy.yml`，推送到 `main` 后会执行：
 
-## Iframe Embed
+- `npm ci`
+- `npm run build`
+- 上传 `dist`
+- 使用官方 GitHub Pages Actions 发布
 
-Standalone embed:
+如果你使用 `gh-pages` 分支发布，也可以在仓库 Settings -> Pages 中选择：
+
+```txt
+Source: Deploy from a branch
+Branch: gh-pages
+Folder: / (root)
+```
+
+## iframe 嵌入
+
+普通嵌入：
 
 ```html
 <div class="demo-frame-wrap">
   <iframe
     src="https://orandolee.github.io/Physical_water/"
-    title="Water Sandbox Demo"
+    title="3D 水体沙盒"
     loading="lazy"
     allow="fullscreen"
     allowfullscreen
@@ -69,13 +98,13 @@ Standalone embed:
 </div>
 ```
 
-Recommended compact embed:
+推荐嵌入模式：
 
 ```html
 <div class="demo-frame-wrap">
   <iframe
     src="https://orandolee.github.io/Physical_water/?embed=1"
-    title="Water Sandbox Demo"
+    title="3D 水体沙盒"
     loading="lazy"
     allow="fullscreen"
     allowfullscreen
@@ -83,7 +112,7 @@ Recommended compact embed:
 </div>
 ```
 
-Responsive frame CSS:
+响应式 iframe 容器：
 
 ```css
 .demo-frame-wrap {
@@ -105,7 +134,7 @@ Responsive frame CSS:
 }
 ```
 
-Immersive frame CSS:
+沉浸式 iframe 容器：
 
 ```css
 .demo-frame-wrap {
@@ -124,20 +153,20 @@ Immersive frame CSS:
 }
 ```
 
-## Controls
+## 操作说明
 
-- Click the canvas to activate keyboard and mouse controls
-- WASD moves the camera
-- Drag empty space or use the right mouse button to rotate the view
-- Wheel zooms in and out
-- Click or drag on the water to create ripples
-- Shift + click makes a stronger disturbance
-- Drag objects from the bottom bar into the tank
-- ESC releases active controls
+- 点击画面激活沙盒
+- `WASD` 移动视角
+- 鼠标拖动或右键拖动观察方向
+- 滚轮调节观察距离
+- 点击或拖动水面制造涟漪
+- `Shift + 左键` 制造更强扰动
+- 从底部物品栏拖拽物体投放到水箱中
+- `ESC` 释放控制
 
-## postMessage API
+## postMessage 接口
 
-Parent pages can send:
+父页面可以向 iframe 发送：
 
 ```ts
 iframe.contentWindow?.postMessage({ type: 'WATER_SANDBOX_PAUSE' }, '*')
@@ -145,15 +174,15 @@ iframe.contentWindow?.postMessage({ type: 'WATER_SANDBOX_RESUME' }, '*')
 iframe.contentWindow?.postMessage({ type: 'WATER_SANDBOX_RESET' }, '*')
 ```
 
-The demo sends this after initialization:
+Demo 初始化完成后会发送：
 
 ```ts
 window.parent?.postMessage({ type: 'WATER_SANDBOX_READY' }, '*')
 ```
 
-The API is optional and the demo runs normally without a parent page.
+这些接口是可选增强，不依赖父页面也能正常运行。
 
-## Structure
+## 文件结构
 
 ```txt
 src/
@@ -180,10 +209,22 @@ src/
     math.ts
 ```
 
-## Future Enhancements
+## 已实现内容
 
-- Particle splashes on high-energy impacts
-- More detailed underwater refraction
-- Extra object shapes and custom materials
-- Optional debug panel for water damping, impulse strength, and lighting
-- Additional sandbox modes such as colored fluids or wave presets
+- 透明水箱和动态水面
+- 鼠标扰动水面
+- WASD 与鼠标视角控制
+- 拖拽物体入水
+- 简化浮力、沉降、碰撞和边界约束
+- 物体排水导致水位上升
+- 水位达到口沿后出现溢出效果
+- 独立模式和 iframe 嵌入模式
+- GitHub Pages 自动部署配置
+
+## 后续可扩展方向
+
+- 高能入水时的粒子水花
+- 更真实的折射和水下视觉
+- 更多物体类型和自定义材质
+- 可选参数调试面板
+- 水体颜色、密度或波纹预设
