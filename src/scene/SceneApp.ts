@@ -211,7 +211,9 @@ export class SceneApp {
     this.renderer.domElement.addEventListener('pointerdown', (event) => this.handlePointerDown(event))
     this.renderer.domElement.addEventListener('pointermove', (event) => this.handlePointerMove(event))
     this.renderer.domElement.addEventListener('pointerup', (event) => this.handlePointerUp(event))
-    this.renderer.domElement.addEventListener('pointerleave', (event) => this.handlePointerUp(event))
+    this.renderer.domElement.addEventListener('pointercancel', (event) => this.handlePointerUp(event))
+    this.renderer.domElement.addEventListener('lostpointercapture', () => this.handlePointerCaptureLost())
+    this.renderer.domElement.addEventListener('contextmenu', (event) => event.preventDefault())
 
     window.addEventListener('message', (event) => {
       const type = event.data?.type
@@ -229,6 +231,7 @@ export class SceneApp {
     if (this.inventory.isDragging || !this.cameraController.isActive) {
       return
     }
+    event.preventDefault()
     this.renderer.domElement.focus()
 
     const waterHit = event.button === 0 ? this.getWaterHit(event) : null
@@ -246,6 +249,7 @@ export class SceneApp {
 
   private handlePointerMove(event: PointerEvent): void {
     if (this.waterDragging) {
+      event.preventDefault()
       const waterHit = this.getWaterHit(event)
       if (waterHit) {
         this.water.disturb(waterHit.x, waterHit.z, event.shiftKey ? -0.34 : -0.16, event.shiftKey ? 0.42 : 0.25)
@@ -257,8 +261,14 @@ export class SceneApp {
   }
 
   private handlePointerUp(event: PointerEvent): void {
+    event.preventDefault()
     this.waterDragging = false
     this.cameraController.endRotation(event)
+  }
+
+  private handlePointerCaptureLost(): void {
+    this.waterDragging = false
+    this.cameraController.endRotation()
   }
 
   private getWaterHit(event: PointerEvent): THREE.Vector3 | null {

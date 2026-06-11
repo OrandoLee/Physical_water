@@ -38,6 +38,7 @@ export class CameraController {
     if (!this.active) {
       return
     }
+    event.preventDefault()
     this.rotating = true
     this.element.setPointerCapture?.(event.pointerId)
   }
@@ -63,8 +64,8 @@ export class CameraController {
       return
     }
 
-    this.forward.set(Math.sin(this.yaw), 0, Math.cos(this.yaw)).normalize()
-    this.right.set(this.forward.z, 0, -this.forward.x).normalize()
+    this.forward.set(-Math.sin(this.yaw), 0, -Math.cos(this.yaw)).normalize()
+    this.right.set(-this.forward.z, 0, this.forward.x).normalize()
 
     let moved = false
     const speed = CAMERA.moveSpeed * deltaTime
