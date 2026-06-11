@@ -13,6 +13,7 @@ export class CameraController {
   private readonly keys = new Set<string>()
   private readonly forward = new THREE.Vector3()
   private readonly right = new THREE.Vector3()
+  private readonly cameraDirection = new THREE.Vector3()
 
   constructor(
     private readonly camera: THREE.PerspectiveCamera,
@@ -26,7 +27,7 @@ export class CameraController {
     this.active = active
     if (!active) {
       this.rotating = false
-      this.keys.clear()
+      this.clearInput()
     }
   }
 
@@ -50,6 +51,10 @@ export class CameraController {
     }
   }
 
+  clearInput(): void {
+    this.keys.clear()
+  }
+
   handlePointerMove(event: PointerEvent): void {
     if (!this.active || !this.rotating) {
       return
@@ -64,7 +69,12 @@ export class CameraController {
       return
     }
 
-    this.forward.set(-Math.sin(this.yaw), 0, -Math.cos(this.yaw)).normalize()
+    this.camera.getWorldDirection(this.cameraDirection)
+    this.forward.set(this.cameraDirection.x, 0, this.cameraDirection.z)
+    if (this.forward.lengthSq() < 0.0001) {
+      this.forward.set(-Math.sin(this.yaw), 0, -Math.cos(this.yaw))
+    }
+    this.forward.normalize()
     this.right.set(-this.forward.z, 0, this.forward.x).normalize()
 
     let moved = false
@@ -100,18 +110,31 @@ export class CameraController {
 
   private bindEvents(): void {
     window.addEventListener('keydown', (event) => {
-      if (!this.active) {
+      if (!this.active || this.isTextInputFocused()) {
         return
       }
-      if (['KeyW', 'KeyA', 'KeyS', 'KeyD'].includes(event.code)) {
+      const code = this.toMovementCode(event)
+      if (code) {
         event.preventDefault()
-        this.keys.add(event.code)
+        this.keys.add(code)
       }
     })
 
     window.addEventListener('keyup', (event) => {
-      this.keys.delete(event.code)
+      const code = this.toMovementCode(event)
+      if (code) {
+        this.keys.delete(code)
+      }
     })
+
+    window.addEventListener('blur', () => this.clearInput())
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        this.clearInput()
+      }
+    })
+
+    this.element.addEventListener('blur', () => this.clearInput())
 
     this.element.addEventListener('wheel', (event) => {
       if (!this.active) {
@@ -132,5 +155,39 @@ export class CameraController {
     )
     this.camera.position.y = clamp(this.camera.position.y, 1.1, 7)
     this.camera.lookAt(this.target)
+  }
+
+  private toMovementCode(event: KeyboardEvent): string | null {
+    if (['KeyW', 'KeyA', 'KeyS', 'KeyD'].includes(event.code)) {
+      return event.code
+    }
+
+    switch (event.key.toLowerCase()) {
+      case 'w':
+        return 'KeyW'
+      case 'a':
+        return 'KeyA'
+      case 's':
+        return 'KeyS'
+      case 'd':
+        return 'KeyD'
+      default:
+        return null
+    }
+  }
+
+  private isTextInputFocused(): boolean {
+    const activeElement = document.activeElement
+    if (!activeElement) {
+      return false
+    }
+
+    const tagName = activeElement.tagName.toLowerCase()
+    return (
+      tagName === 'input' ||
+      tagName === 'textarea' ||
+      tagName === 'select' ||
+      activeElement.hasAttribute('contenteditable')
+    )
   }
 }

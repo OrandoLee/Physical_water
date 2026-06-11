@@ -10,9 +10,10 @@ export const TANK = {
 export const WATER = {
   columns: 112,
   rows: 72,
-  damping: 0.989,
-  propagation: 0.48,
-  idleWave: 0.018,
+  damping: 0.955,
+  propagation: 0.43,
+  idleWave: 0.007,
+  maxHeight: 0.22,
 }
 
 export const CAMERA = {

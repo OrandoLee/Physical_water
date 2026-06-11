@@ -10,6 +10,8 @@ export interface ObjectDefinition {
   drag: number
   radius: number
   disturbanceStrength: number
+  surfaceDamping: number
+  sinkRate: number
 }
 
 export const OBJECT_DEFINITIONS: ObjectDefinition[] = [
@@ -22,7 +24,9 @@ export const OBJECT_DEFINITIONS: ObjectDefinition[] = [
     buoyancy: 17,
     drag: 0.92,
     radius: 0.31,
-    disturbanceStrength: 0.14,
+    disturbanceStrength: 0.08,
+    surfaceDamping: 5.8,
+    sinkRate: 0,
   },
   {
     kind: 'metal',
@@ -33,7 +37,9 @@ export const OBJECT_DEFINITIONS: ObjectDefinition[] = [
     buoyancy: 4.3,
     drag: 0.82,
     radius: 0.3,
-    disturbanceStrength: 0.44,
+    disturbanceStrength: 0.32,
+    surfaceDamping: 2.4,
+    sinkRate: 2.8,
   },
   {
     kind: 'glass',
@@ -44,7 +50,9 @@ export const OBJECT_DEFINITIONS: ObjectDefinition[] = [
     buoyancy: 8.2,
     drag: 0.86,
     radius: 0.34,
-    disturbanceStrength: 0.26,
+    disturbanceStrength: 0.16,
+    surfaceDamping: 4.2,
+    sinkRate: 0.35,
   },
   {
     kind: 'buoy',
@@ -55,7 +63,9 @@ export const OBJECT_DEFINITIONS: ObjectDefinition[] = [
     buoyancy: 20,
     drag: 0.94,
     radius: 0.34,
-    disturbanceStrength: 0.12,
+    disturbanceStrength: 0.07,
+    surfaceDamping: 6.8,
+    sinkRate: 0,
   },
   {
     kind: 'rock',
@@ -66,7 +76,9 @@ export const OBJECT_DEFINITIONS: ObjectDefinition[] = [
     buoyancy: 3.2,
     drag: 0.78,
     radius: 0.36,
-    disturbanceStrength: 0.62,
+    disturbanceStrength: 0.42,
+    surfaceDamping: 2.2,
+    sinkRate: 3.6,
   },
 ]
 

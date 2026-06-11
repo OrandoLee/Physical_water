@@ -14,6 +14,7 @@ export class FloatingObject {
 
   private wasAboveWater = true
   private disturbanceClock = 0
+  private readonly spinDamping = 0.985
 
   constructor(
     public readonly mesh: THREE.Object3D,
@@ -36,18 +37,33 @@ export class FloatingObject {
 
     let accelerationY = -9.8
     if (inWater) {
-      const waveVelocity = water.getVelocityAt(position.x, position.z) * 45
-      accelerationY += this.definition.buoyancy * submergedRatio / this.definition.density
-      accelerationY += waveVelocity * 0.08
-      this.velocity.multiplyScalar(this.definition.drag)
+      const density = this.definition.density
+      const waveVelocity = water.getVelocityAt(position.x, position.z)
+      const damping = Math.pow(this.definition.drag, deltaTime * 60)
+      this.velocity.x *= damping
+      this.velocity.z *= damping
+
+      if (density < 1) {
+        const floatOffset = radius * clamp(1 - density * 1.35, 0.08, 0.62)
+        const targetY = waterHeight + floatOffset
+        const spring = this.definition.buoyancy * 0.42
+        accelerationY += (targetY - position.y) * spring
+        accelerationY -= this.velocity.y * this.definition.surfaceDamping
+        accelerationY += waveVelocity * 5
+      } else {
+        accelerationY += 9.8 * submergedRatio / density
+        accelerationY -= this.velocity.y * this.definition.surfaceDamping * 0.42
+        accelerationY -= this.definition.sinkRate * submergedRatio
+      }
     }
 
-    this.velocity.y += accelerationY * deltaTime
+    this.velocity.y = clamp(this.velocity.y + accelerationY * deltaTime, -4.2, 2.6)
     position.addScaledVector(this.velocity, deltaTime)
 
     this.mesh.rotation.x += this.angularVelocity.x * deltaTime
     this.mesh.rotation.y += this.angularVelocity.y * deltaTime
     this.mesh.rotation.z += this.angularVelocity.z * deltaTime
+    this.angularVelocity.multiplyScalar(Math.pow(this.spinDamping, deltaTime * 60))
 
     const halfWidth = TANK.width * 0.5 - radius - TANK.wallThickness
     const halfDepth = TANK.depth * 0.5 - radius - TANK.wallThickness
@@ -73,19 +89,19 @@ export class FloatingObject {
       water.disturb(
         position.x,
         position.z,
-        -this.definition.disturbanceStrength,
+        -this.definition.disturbanceStrength * clamp(Math.abs(this.velocity.y) * 0.6, 0.45, 1.25),
         radius * (2.2 + this.definition.mass * 0.12),
       )
     }
 
     this.disturbanceClock += deltaTime
-    if (inWater && this.disturbanceClock > 0.18 && this.velocity.lengthSq() > 0.08) {
+    if (inWater && this.disturbanceClock > 0.28 && this.velocity.lengthSq() > 0.16) {
       this.disturbanceClock = 0
       water.disturb(
         position.x,
         position.z,
-        Math.sign(this.velocity.y || -1) * this.definition.disturbanceStrength * 0.2,
-        radius * 1.65,
+        Math.sign(this.velocity.y || -1) * this.definition.disturbanceStrength * 0.08,
+        radius * 1.35,
       )
     }
 

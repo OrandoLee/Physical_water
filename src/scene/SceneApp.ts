@@ -192,6 +192,9 @@ export class SceneApp {
     window.addEventListener('resize', () => this.resize())
     document.addEventListener('visibilitychange', () => {
       this.paused = document.hidden
+      if (document.hidden) {
+        this.cameraController.clearInput()
+      }
     })
 
     const observer = new IntersectionObserver((entries) => {
@@ -203,6 +206,7 @@ export class SceneApp {
       if (event.code === 'Escape') {
         this.cameraController.setActive(false)
         this.cameraController.endRotation()
+        this.cameraController.clearInput()
         this.waterDragging = false
         this.overlay.show()
       }

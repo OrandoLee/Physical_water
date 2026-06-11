@@ -49,6 +49,7 @@ export class WaterSurface {
   }
 
   disturb(worldX: number, worldZ: number, strength: number, radius: number): void {
+    const clampedStrength = clamp(strength, -0.26, 0.26)
     const gridX = ((worldX / TANK.width) + 0.5) * (this.columns - 1)
     const gridZ = ((worldZ / TANK.depth) + 0.5) * (this.rows - 1)
     const radiusX = Math.max(1, (radius / TANK.width) * this.columns)
@@ -64,8 +65,13 @@ export class WaterSurface {
         const dz = (z - gridZ) / radiusZ
         const distance = Math.sqrt(dx * dx + dz * dz)
         if (distance <= 1) {
-          const falloff = Math.cos(distance * Math.PI * 0.5)
-          this.current[this.index(x, z)] += strength * falloff
+          const falloff = Math.cos(distance * Math.PI * 0.5) ** 2
+          const i = this.index(x, z)
+          this.current[i] = clamp(
+            this.current[i] + clampedStrength * falloff,
+            -WATER.maxHeight,
+            WATER.maxHeight,
+          )
         }
       }
     }
@@ -118,7 +124,7 @@ export class WaterSurface {
         const wave = neighbors * WATER.propagation - this.previous[i]
         const edgeFade =
           Math.min(x, z, this.columns - 1 - x, this.rows - 1 - z) < 3 ? 0.93 : 1
-        this.next[i] = wave * WATER.damping * edgeFade
+        this.next[i] = clamp(wave * WATER.damping * edgeFade, -WATER.maxHeight, WATER.maxHeight)
       }
     }
 
@@ -138,7 +144,11 @@ export class WaterSurface {
           Math.sin(localX * 2.2 + this.time * 1.1) *
           Math.cos(localZ * 2.9 - this.time * 0.8) *
           WATER.idleWave
-        this.positions.array[positionIndex] = this.current[vertex] + idle
+        this.positions.array[positionIndex] = clamp(
+          this.current[vertex] + idle,
+          -WATER.maxHeight,
+          WATER.maxHeight,
+        )
       }
     }
 
