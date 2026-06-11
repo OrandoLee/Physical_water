@@ -44,12 +44,9 @@ export class FloatingObject {
       this.velocity.z *= damping
 
       if (density < 1) {
-        const floatOffset = radius * clamp(1 - density * 1.35, 0.08, 0.62)
-        const targetY = waterHeight + floatOffset
-        const spring = this.definition.buoyancy * 0.42
-        accelerationY += (targetY - position.y) * spring
+        accelerationY += 9.8 * submergedRatio / density
         accelerationY -= this.velocity.y * this.definition.surfaceDamping
-        accelerationY += waveVelocity * 5
+        accelerationY += waveVelocity * 1.8
       } else {
         accelerationY += 9.8 * submergedRatio / density
         accelerationY -= this.velocity.y * this.definition.surfaceDamping * 0.42
@@ -57,7 +54,8 @@ export class FloatingObject {
       }
     }
 
-    this.velocity.y = clamp(this.velocity.y + accelerationY * deltaTime, -4.2, 2.6)
+    const maxRiseSpeed = this.definition.kind === 'buoy' ? 0.72 : 1.35
+    this.velocity.y = clamp(this.velocity.y + accelerationY * deltaTime, -4.2, maxRiseSpeed)
     position.addScaledVector(this.velocity, deltaTime)
 
     this.mesh.rotation.x += this.angularVelocity.x * deltaTime
