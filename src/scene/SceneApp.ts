@@ -23,6 +23,9 @@ export class SceneApp {
   private readonly pointer = new THREE.Vector2()
   private readonly dropPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -TANK.waterLevel)
   private readonly dropPoint = new THREE.Vector3()
+  private readonly collisionNormal = new THREE.Vector3()
+  private readonly relativeVelocity = new THREE.Vector3()
+  private readonly tangentVelocity = new THREE.Vector3()
   private readonly water: WaterSurface
   private readonly cameraController: CameraController
   private readonly composer: EffectComposer
@@ -92,6 +95,7 @@ export class SceneApp {
     for (const object of this.objects) {
       object.update(deltaTime, this.water)
     }
+    this.resolveObjectCollisions()
     this.updateDisplacedWaterLevel(deltaTime)
     this.water.update(deltaTime)
     this.composer.render()
@@ -297,9 +301,10 @@ export class SceneApp {
     const x = hasIntersection ? this.dropPoint.x : 0
     const z = hasIntersection ? this.dropPoint.z : 0
     const object = createFloatingObject(kind)
+    const topLimit = TANK.height - object.definition.radius - TANK.wallThickness
     object.mesh.position.set(
       THREE.MathUtils.clamp(x, -TANK.width * 0.38, TANK.width * 0.38),
-      this.water.level + 1.25,
+      THREE.MathUtils.clamp(this.water.level + 1.05, TANK.bottomY + object.definition.radius, topLimit),
       THREE.MathUtils.clamp(z, -TANK.depth * 0.36, TANK.depth * 0.36),
     )
     this.objects.push(object)
@@ -314,6 +319,92 @@ export class SceneApp {
       object.dispose()
     }
     this.objects.length = 0
+  }
+
+  private resolveObjectCollisions(): void {
+    if (this.objects.length < 2) {
+      return
+    }
+
+    const iterations = this.objects.length > 8 ? 5 : 4
+    for (let iteration = 0; iteration < iterations; iteration += 1) {
+      for (let i = 0; i < this.objects.length - 1; i += 1) {
+        for (let j = i + 1; j < this.objects.length; j += 1) {
+          this.resolveObjectPair(this.objects[i], this.objects[j], i, j)
+        }
+      }
+
+      for (const object of this.objects) {
+        object.constrainToTank(0.22)
+      }
+    }
+  }
+
+  private resolveObjectPair(a: FloatingObject, b: FloatingObject, indexA: number, indexB: number): void {
+    const positionA = a.mesh.position
+    const positionB = b.mesh.position
+    const radiusA = a.definition.radius
+    const radiusB = b.definition.radius
+    const minDistance = radiusA + radiusB
+
+    this.collisionNormal.subVectors(positionB, positionA)
+    const distanceSq = this.collisionNormal.lengthSq()
+    if (distanceSq >= minDistance * minDistance) {
+      return
+    }
+
+    let distance = Math.sqrt(distanceSq)
+    if (distance < 0.0001) {
+      const angle = (indexA * 12.9898 + indexB * 78.233) % (Math.PI * 2)
+      this.collisionNormal.set(Math.cos(angle), 0.25, Math.sin(angle)).normalize()
+      distance = 0.0001
+    } else {
+      this.collisionNormal.multiplyScalar(1 / distance)
+    }
+
+    const inverseMassA = 1 / Math.max(a.definition.mass, 0.001)
+    const inverseMassB = 1 / Math.max(b.definition.mass, 0.001)
+    const inverseMassTotal = inverseMassA + inverseMassB
+    const penetration = minDistance - distance
+    const correction = Math.max(penetration - 0.004, 0) * 0.82 / inverseMassTotal
+
+    positionA.addScaledVector(this.collisionNormal, -correction * inverseMassA)
+    positionB.addScaledVector(this.collisionNormal, correction * inverseMassB)
+
+    this.relativeVelocity.subVectors(b.velocity, a.velocity)
+    const separatingVelocity = this.relativeVelocity.dot(this.collisionNormal)
+    if (separatingVelocity >= 0) {
+      return
+    }
+
+    const restitution = this.getPairRestitution(a, b)
+    const impulseMagnitude = (-(1 + restitution) * separatingVelocity) / inverseMassTotal
+    a.velocity.addScaledVector(this.collisionNormal, -impulseMagnitude * inverseMassA)
+    b.velocity.addScaledVector(this.collisionNormal, impulseMagnitude * inverseMassB)
+
+    this.tangentVelocity
+      .copy(this.relativeVelocity)
+      .addScaledVector(this.collisionNormal, -separatingVelocity)
+    const tangentSpeed = this.tangentVelocity.length()
+    if (tangentSpeed > 0.0001) {
+      this.tangentVelocity.multiplyScalar(1 / tangentSpeed)
+      const frictionMagnitude = Math.min(tangentSpeed / inverseMassTotal, impulseMagnitude * 0.38)
+      a.velocity.addScaledVector(this.tangentVelocity, frictionMagnitude * inverseMassA)
+      b.velocity.addScaledVector(this.tangentVelocity, -frictionMagnitude * inverseMassB)
+    }
+
+    a.angularVelocity.multiplyScalar(0.92)
+    b.angularVelocity.multiplyScalar(0.92)
+  }
+
+  private getPairRestitution(a: FloatingObject, b: FloatingObject): number {
+    const midpointY = (a.mesh.position.y + b.mesh.position.y) * 0.5
+    if (midpointY < this.water.level + Math.max(a.definition.radius, b.definition.radius) * 0.45) {
+      return 0.06
+    }
+
+    const heaviestDensity = Math.max(a.definition.density, b.definition.density)
+    return heaviestDensity > 3 ? 0.18 : 0.12
   }
 
   private updateDisplacedWaterLevel(deltaTime: number): void {

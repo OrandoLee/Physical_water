@@ -63,25 +63,7 @@ export class FloatingObject {
     this.mesh.rotation.z += this.angularVelocity.z * deltaTime
     this.angularVelocity.multiplyScalar(Math.pow(this.spinDamping, deltaTime * 60))
 
-    const halfWidth = TANK.width * 0.5 - radius - TANK.wallThickness
-    const halfDepth = TANK.depth * 0.5 - radius - TANK.wallThickness
-    if (position.x < -halfWidth || position.x > halfWidth) {
-      position.x = clamp(position.x, -halfWidth, halfWidth)
-      this.velocity.x *= -0.42
-    }
-    if (position.z < -halfDepth || position.z > halfDepth) {
-      position.z = clamp(position.z, -halfDepth, halfDepth)
-      this.velocity.z *= -0.42
-    }
-
-    const bottomLimit = TANK.bottomY + radius + 0.06
-    if (position.y < bottomLimit) {
-      position.y = bottomLimit
-      this.velocity.y = Math.max(0, -this.velocity.y * 0.16)
-      this.velocity.x *= 0.8
-      this.velocity.z *= 0.8
-      this.angularVelocity.multiplyScalar(0.9)
-    }
+    this.constrainToTank()
 
     if (this.wasAboveWater && inWater) {
       water.disturb(
@@ -104,6 +86,36 @@ export class FloatingObject {
     }
 
     this.wasAboveWater = !inWater
+  }
+
+  constrainToTank(restitution = 0.34): void {
+    const position = this.mesh.position
+    const radius = this.definition.radius
+    const halfWidth = TANK.width * 0.5 - radius - TANK.wallThickness
+    const halfDepth = TANK.depth * 0.5 - radius - TANK.wallThickness
+    if (position.x < -halfWidth || position.x > halfWidth) {
+      position.x = clamp(position.x, -halfWidth, halfWidth)
+      this.velocity.x *= -restitution
+    }
+    if (position.z < -halfDepth || position.z > halfDepth) {
+      position.z = clamp(position.z, -halfDepth, halfDepth)
+      this.velocity.z *= -restitution
+    }
+
+    const bottomLimit = TANK.bottomY + radius + 0.06
+    if (position.y < bottomLimit) {
+      position.y = bottomLimit
+      this.velocity.y = Math.max(0, -this.velocity.y * 0.16)
+      this.velocity.x *= 0.8
+      this.velocity.z *= 0.8
+      this.angularVelocity.multiplyScalar(0.9)
+    }
+
+    const topLimit = TANK.height - radius - TANK.wallThickness
+    if (position.y > topLimit) {
+      position.y = topLimit
+      this.velocity.y = Math.min(0, -this.velocity.y * 0.18)
+    }
   }
 
   getDisplacedVolume(waterLevel: number): number {
