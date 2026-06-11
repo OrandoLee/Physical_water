@@ -22,13 +22,13 @@ export class ActivationOverlay {
         ${this.createGridCells()}
       </div>
       <div class="start-panel">
-        <p class="start-index">实验编号 / 001</p>
+        <p class="start-index">实验编号 / 002</p>
         <p class="start-kicker">DELEE LAB 呈现</p>
         <h1 class="start-title">
           <span>PHYSICAL</span>
           <span>WATER</span>
         </h1>
-        <p class="start-ghost">LAB-01</p>
+        <p class="start-ghost">LAB-02</p>
         <div class="start-rule"></div>
         <div class="start-brief">
           <span>行动指令</span>
