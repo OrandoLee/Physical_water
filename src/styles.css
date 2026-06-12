@@ -102,6 +102,133 @@ button {
   display: none;
 }
 
+.metrics-panel,
+.debug-panel {
+  position: absolute;
+  right: 18px;
+  z-index: 8;
+  width: min(276px, calc(100% - 36px));
+  box-sizing: border-box;
+  border: 1px solid rgba(170, 235, 225, 0.25);
+  border-radius: 8px;
+  background: rgba(7, 13, 15, 0.66);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(16px);
+}
+
+.metrics-panel {
+  top: 18px;
+  padding: 13px 14px 12px;
+}
+
+.panel-title,
+.debug-toggle,
+.debug-subtitle {
+  color: #f7feff;
+  font-size: 13px;
+  font-weight: 760;
+  letter-spacing: 0;
+}
+
+.metrics-grid {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 7px 12px;
+  margin-top: 10px;
+  color: rgba(236, 251, 255, 0.72);
+  font-size: 12px;
+  line-height: 1.18;
+}
+
+.metrics-grid b {
+  color: #a8fff1;
+  font-variant-numeric: tabular-nums;
+  font-weight: 760;
+}
+
+.metrics-preset {
+  margin-top: 10px;
+  padding-top: 9px;
+  border-top: 1px solid rgba(170, 235, 225, 0.16);
+  color: rgba(255, 223, 173, 0.9);
+  font-size: 12px;
+  font-weight: 680;
+}
+
+.debug-panel {
+  top: 190px;
+  overflow: hidden;
+}
+
+.debug-toggle {
+  width: 100%;
+  min-height: 38px;
+  border: 0;
+  color: #ecfbff;
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.debug-toggle:hover,
+.debug-toggle:focus-visible {
+  outline: none;
+  background: rgba(98, 218, 235, 0.12);
+}
+
+.debug-body {
+  display: grid;
+  gap: 10px;
+  padding: 11px 13px 13px;
+  border-top: 1px solid rgba(170, 235, 225, 0.14);
+}
+
+.debug-body[hidden] {
+  display: none;
+}
+
+.debug-body label {
+  display: grid;
+  grid-template-columns: 92px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  color: rgba(236, 251, 255, 0.76);
+  font-size: 12px;
+}
+
+.debug-body select,
+.debug-body input[type="range"],
+.debug-body input[type="color"] {
+  min-width: 0;
+}
+
+.debug-body select {
+  height: 30px;
+  border: 1px solid rgba(155, 238, 255, 0.22);
+  border-radius: 6px;
+  color: #ecfbff;
+  background: #101a1d;
+}
+
+.debug-body input[type="color"] {
+  width: 100%;
+  height: 30px;
+  padding: 0;
+  border: 1px solid rgba(155, 238, 255, 0.22);
+  border-radius: 6px;
+  background: transparent;
+}
+
+.debug-check {
+  grid-template-columns: 18px 1fr !important;
+}
+
+.debug-subtitle {
+  margin-top: 4px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(170, 235, 225, 0.14);
+  color: rgba(255, 223, 173, 0.88);
+}
+
 .activation-overlay {
   position: absolute;
   inset: 0;
@@ -400,9 +527,9 @@ button {
   left: max(12px, env(safe-area-inset-left));
   z-index: 9;
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(112px, 1fr));
   gap: 10px;
-  max-width: 760px;
+  max-width: 1020px;
   margin: 0 auto;
   padding: 10px;
   border: 1px solid rgba(155, 238, 255, 0.24);
@@ -485,6 +612,34 @@ button {
 .drag-preview.inventory-rock {
   color: #dce5e8;
   background: linear-gradient(135deg, #596168, #24292e);
+}
+
+.inventory-foam .inventory-icon,
+.drag-preview.inventory-foam {
+  background: linear-gradient(135deg, #ffffff, #cfdac8);
+}
+
+.inventory-rubber .inventory-icon,
+.drag-preview.inventory-rubber {
+  color: #f5f6f6;
+  background: linear-gradient(135deg, #ff5b51, #111418 56%);
+}
+
+.inventory-ceramic .inventory-icon,
+.drag-preview.inventory-ceramic {
+  background: linear-gradient(135deg, #fff5e7, #9db5ca);
+}
+
+.inventory-oil .inventory-icon,
+.drag-preview.inventory-oil {
+  color: #dcecff;
+  background: linear-gradient(135deg, #536780, #151f34);
+}
+
+.inventory-custom .inventory-icon,
+.drag-preview.inventory-custom {
+  color: #fff3e7;
+  background: linear-gradient(135deg, #ff7a4b, #7a58ff);
 }
 
 .drag-preview {
@@ -623,6 +778,37 @@ button {
 
   .inventory-label {
     display: none;
+  }
+
+  .metrics-panel {
+    top: 10px;
+    right: 10px;
+    width: min(230px, calc(100% - 20px));
+    padding: 9px 10px;
+  }
+
+  .metrics-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 5px 8px;
+    font-size: 11px;
+  }
+
+  .metrics-grid span:nth-of-type(n + 5),
+  .metrics-grid b:nth-of-type(n + 5),
+  .metrics-preset {
+    display: none;
+  }
+
+  .debug-panel {
+    top: 118px;
+    right: 10px;
+    width: 116px;
+  }
+
+  .debug-body {
+    width: 230px;
+    transform: translateX(calc(-100% + 116px));
+    background: rgba(7, 13, 15, 0.9);
   }
 }
 

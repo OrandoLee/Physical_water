@@ -1,16 +1,18 @@
-# 3D 水体沙盒
+# 3D 物理水体沙箱
 
-一个可运行、可部署、可 iframe 嵌入的 Three.js 3D 水体沙盒 Demo。场景包含透明玻璃水箱、可交互水面、简化浮力与碰撞、物体投放、水位上升和溢出效果，适合作为个人网站里的 LAB / Demo 展示项目。
+一个可运行、可部署、可 iframe 嵌入的 Three.js 3D 水体实验 Demo。场景包含透明玻璃水箱、可交互水面、简化浮力与碰撞、物体投放、水位上升、溢流、水花粒子、水下折射视觉和实时指标面板。
 
 ## 功能特性
 
 - Vite + TypeScript + Three.js
-- 透明玻璃水箱、蓝绿色水体、光照、阴影和轻微 Bloom
-- 可交互水面高度场：点击、拖拽、物体入水都会产生波纹
-- WASD 移动视角，鼠标拖动观察方向，滚轮调节距离
-- 底部物品栏：木球、金属球、玻璃块、黄色浮标、重石块
+- 透明玻璃水箱、动态水面、光照、阴影和轻微 Bloom
+- 物体入水粒子水花，并同步产生水面扰动
+- 更真实的水面折射感、水下体积色、焦散光纹和密度雾化
+- 10 种可投放物体：木球、金属球、玻璃块、浮标、重石块、泡沫块、橡胶圈、陶瓷胶囊、油滴软球、自定义材质
+- 调试面板：水体预设、波纹倍率、水面线框、自定义物体颜色/密度/材质
+- 水体预设：清澈实验水、浅海蓝绿、深水高折射、浑浊高密度、盐水强浮力
+- 实时指标面板：水面高度、波动能量、最大浪高、水体密度、物体数量、溢流深度
 - 简化物理：重力、浮力、阻尼、沉浮、边界约束、物体碰撞
-- 多物体排水导致整体水位上升，达到水箱口沿后出现溢出效果
 - 支持独立页面和 `?embed=1` 嵌入模式
 - 预留 `postMessage` 控制接口：暂停、恢复、重置、加载完成
 - GitHub Actions 自动构建并发布到 GitHub Pages
@@ -53,18 +55,12 @@ dist/index.html
 base: './'
 ```
 
-相对资源路径既适合 GitHub Pages 项目子路径，也适合本地直接打开 `dist/index.html`。
+相对资源路径适合 GitHub Pages 项目子路径，也适合本地直接打开 `dist/index.html`。
 
 线上地址通常是：
 
 ```txt
 https://orandolee.github.io/Physical_water/
-```
-
-如果部署到根域名、Vercel 或 Netlify 根路径，也可以改为：
-
-```ts
-base: '/'
 ```
 
 仓库内置 `.github/workflows/deploy.yml`，推送到 `main` 后会执行：
@@ -74,94 +70,42 @@ base: '/'
 - 上传 `dist`
 - 使用官方 GitHub Pages Actions 发布
 
-如果你使用 `gh-pages` 分支发布，也可以在仓库 Settings -> Pages 中选择：
-
-```txt
-Source: Deploy from a branch
-Branch: gh-pages
-Folder: / (root)
-```
-
 ## iframe 嵌入
 
 普通嵌入：
 
 ```html
-<div class="demo-frame-wrap">
-  <iframe
-    src="https://orandolee.github.io/Physical_water/"
-    title="3D 水体沙盒"
-    loading="lazy"
-    allow="fullscreen"
-    allowfullscreen
-  ></iframe>
-</div>
+<iframe
+  src="https://orandolee.github.io/Physical_water/"
+  title="3D 物理水体沙箱"
+  loading="lazy"
+  allow="fullscreen"
+  allowfullscreen
+></iframe>
 ```
 
 推荐嵌入模式：
 
 ```html
-<div class="demo-frame-wrap">
-  <iframe
-    src="https://orandolee.github.io/Physical_water/?embed=1"
-    title="3D 水体沙盒"
-    loading="lazy"
-    allow="fullscreen"
-    allowfullscreen
-  ></iframe>
-</div>
-```
-
-响应式 iframe 容器：
-
-```css
-.demo-frame-wrap {
-  width: 100%;
-  max-width: 1200px;
-  margin: 0 auto;
-  aspect-ratio: 16 / 9;
-  border-radius: 24px;
-  overflow: hidden;
-  background: #05070a;
-  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.35);
-}
-
-.demo-frame-wrap iframe {
-  width: 100%;
-  height: 100%;
-  border: 0;
-  display: block;
-}
-```
-
-沉浸式 iframe 容器：
-
-```css
-.demo-frame-wrap {
-  width: 100%;
-  height: min(86vh, 900px);
-  border-radius: 28px;
-  overflow: hidden;
-  background: #05070a;
-}
-
-.demo-frame-wrap iframe {
-  width: 100%;
-  height: 100%;
-  border: 0;
-  display: block;
-}
+<iframe
+  src="https://orandolee.github.io/Physical_water/?embed=1"
+  title="3D 物理水体沙箱"
+  loading="lazy"
+  allow="fullscreen"
+  allowfullscreen
+></iframe>
 ```
 
 ## 操作说明
 
-- 点击画面激活沙盒
+- 点击画面激活沙箱
 - `WASD` 移动视角
 - 鼠标拖动或右键拖动观察方向
 - 滚轮调节观察距离
-- 点击或拖动水面制造涟漪
+- 点击或拖动水面制造波纹
 - `Shift + 左键` 制造更强扰动
 - 从底部物品栏拖拽物体投放到水箱中
+- 点击右上角“调试”打开参数面板
 - `ESC` 释放控制
 
 ## postMessage 接口
@@ -194,37 +138,22 @@ src/
     Lighting.ts
     PostProcessing.ts
   water/
-    WaterSurface.ts
+    SplashParticles.ts
+    UnderwaterVisuals.ts
     WaterMaterial.ts
+    WaterPresets.ts
+    WaterSurface.ts
   objects/
     FloatingObject.ts
     ObjectFactory.ts
     ObjectTypes.ts
   ui/
     ActivationOverlay.ts
+    DebugPanel.ts
     Hud.ts
     InventoryBar.ts
+    MetricsPanel.ts
   utils/
     constants.ts
     math.ts
 ```
-
-## 已实现内容
-
-- 透明水箱和动态水面
-- 鼠标扰动水面
-- WASD 与鼠标视角控制
-- 拖拽物体入水
-- 简化浮力、沉降、碰撞和边界约束
-- 物体排水导致水位上升
-- 水位达到口沿后出现溢出效果
-- 独立模式和 iframe 嵌入模式
-- GitHub Pages 自动部署配置
-
-## 后续可扩展方向
-
-- 高能入水时的粒子水花
-- 更真实的折射和水下视觉
-- 更多物体类型和自定义材质
-- 可选参数调试面板
-- 水体颜色、密度或波纹预设

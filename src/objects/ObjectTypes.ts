@@ -1,4 +1,22 @@
-export type ObjectKind = 'wood' | 'metal' | 'glass' | 'buoy' | 'rock'
+export type ObjectKind =
+  | 'wood'
+  | 'metal'
+  | 'glass'
+  | 'buoy'
+  | 'rock'
+  | 'foam'
+  | 'rubber'
+  | 'ceramic'
+  | 'oil'
+  | 'custom'
+
+export interface CustomMaterialOptions {
+  color: number
+  density: number
+  roughness: number
+  metalness: number
+  transmission: number
+}
 
 export interface ObjectDefinition {
   kind: ObjectKind
@@ -79,6 +97,71 @@ export const OBJECT_DEFINITIONS: ObjectDefinition[] = [
     disturbanceStrength: 0.42,
     surfaceDamping: 2.2,
     sinkRate: 3.6,
+  },
+  {
+    kind: 'foam',
+    label: '泡沫块',
+    icon: '泡',
+    mass: 0.22,
+    density: 0.18,
+    buoyancy: 20,
+    drag: 0.94,
+    radius: 0.33,
+    disturbanceStrength: 0.045,
+    surfaceDamping: 12.5,
+    sinkRate: 0,
+  },
+  {
+    kind: 'rubber',
+    label: '橡胶圈',
+    icon: '胶',
+    mass: 0.82,
+    density: 0.92,
+    buoyancy: 12,
+    drag: 0.9,
+    radius: 0.37,
+    disturbanceStrength: 0.1,
+    surfaceDamping: 6.8,
+    sinkRate: 0,
+  },
+  {
+    kind: 'ceramic',
+    label: '陶瓷胶囊',
+    icon: '陶',
+    mass: 1.85,
+    density: 2.35,
+    buoyancy: 6.5,
+    drag: 0.84,
+    radius: 0.32,
+    disturbanceStrength: 0.22,
+    surfaceDamping: 3.5,
+    sinkRate: 1.25,
+  },
+  {
+    kind: 'oil',
+    label: '油滴软球',
+    icon: '油',
+    mass: 0.62,
+    density: 0.86,
+    buoyancy: 10.5,
+    drag: 0.96,
+    radius: 0.35,
+    disturbanceStrength: 0.06,
+    surfaceDamping: 8.8,
+    sinkRate: 0,
+  },
+  {
+    kind: 'custom',
+    label: '自定义材质',
+    icon: '调',
+    mass: 1.25,
+    density: 1.15,
+    buoyancy: 8,
+    drag: 0.88,
+    radius: 0.34,
+    disturbanceStrength: 0.18,
+    surfaceDamping: 4.5,
+    sinkRate: 0.5,
   },
 ]
 

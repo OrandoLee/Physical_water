@@ -1,13 +1,19 @@
 import * as THREE from 'three'
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js'
+import { CustomMaterialOptions } from '../objects/ObjectTypes'
 import { FloatingObject } from '../objects/FloatingObject'
 import { createFloatingObject } from '../objects/ObjectFactory'
 import { ObjectKind } from '../objects/ObjectTypes'
 import { ActivationOverlay } from '../ui/ActivationOverlay'
+import { DebugPanel } from '../ui/DebugPanel'
 import { Hud } from '../ui/Hud'
 import { InventoryBar } from '../ui/InventoryBar'
+import { MetricsPanel } from '../ui/MetricsPanel'
 import { TANK, WATER } from '../utils/constants'
 import { screenToNdc } from '../utils/math'
+import { SplashParticles } from '../water/SplashParticles'
+import { UnderwaterVisuals } from '../water/UnderwaterVisuals'
+import { getWaterPreset, WaterPreset, WaterPresetId } from '../water/WaterPresets'
 import { WaterSurface } from '../water/WaterSurface'
 import { CameraController } from './CameraController'
 import { addLighting } from './Lighting'
@@ -31,12 +37,23 @@ export class SceneApp {
   private readonly composer: EffectComposer
   private readonly overlay: ActivationOverlay
   private readonly inventory: InventoryBar
+  private readonly metricsPanel: MetricsPanel
+  private readonly debugPanel: DebugPanel
+  private readonly splash: SplashParticles
+  private readonly underwater: UnderwaterVisuals
   private readonly objects: FloatingObject[] = []
-  private waterVolume?: THREE.Mesh
   private overflowGroup?: THREE.Group
   private overflowPuddle?: THREE.Mesh
   private readonly overflowSheets: THREE.Mesh[] = []
   private overflowDepth = 0
+  private currentWaterPreset: WaterPreset = getWaterPreset('clear')
+  private customMaterialOptions: CustomMaterialOptions = {
+    color: 0xff6f4a,
+    density: 1.15,
+    roughness: 0.42,
+    metalness: 0.04,
+    transmission: 0,
+  }
 
   private waterDragging = false
   private paused = false
@@ -62,7 +79,12 @@ export class SceneApp {
     this.addEnvironment()
 
     this.water = new WaterSurface()
+    this.currentWaterPreset = this.water.setPreset('clear')
     this.scene.add(this.water.mesh)
+    this.underwater = new UnderwaterVisuals(this.currentWaterPreset)
+    this.scene.add(this.underwater.group)
+    this.splash = new SplashParticles()
+    this.scene.add(this.splash.points)
     this.addTank()
 
     this.cameraController = new CameraController(this.camera, this.renderer.domElement)
@@ -70,6 +92,16 @@ export class SceneApp {
     this.overlay = new ActivationOverlay(root, () => this.activate(), () => this.reset())
     this.overlay.setEmbedMode(this.isEmbed)
     new Hud(root, this.isEmbed)
+    this.metricsPanel = new MetricsPanel(root, this.isEmbed)
+    this.debugPanel = new DebugPanel(root, this.isEmbed, {
+      onPresetChange: (id) => this.applyWaterPreset(id),
+      onRippleScaleChange: (scale) => this.water.setRippleScale(scale),
+      onWireframeChange: (enabled) => this.water.setWireframe(enabled),
+      onCustomMaterialChange: (options) => {
+        this.customMaterialOptions = options
+      },
+    })
+    this.customMaterialOptions = this.debugPanel.getCustomMaterialOptions()
     this.inventory = new InventoryBar(root, (kind, x, y) => this.dropObject(kind, x, y))
 
     this.bindEvents()
@@ -97,11 +129,26 @@ export class SceneApp {
 
     this.cameraController.update(deltaTime)
     for (const object of this.objects) {
-      object.update(deltaTime, this.water)
+      const impact = object.update(deltaTime, this.water)
+      if (impact) {
+        this.splash.spawn(impact)
+      }
     }
     this.resolveObjectCollisions()
     this.updateDisplacedWaterLevel(deltaTime)
     this.water.update(deltaTime)
+    const metrics = this.water.getMetrics()
+    this.underwater.update(deltaTime, this.water.level, metrics.waveEnergy)
+    this.splash.update(deltaTime)
+    this.metricsPanel.update({
+      waterLevel: metrics.level,
+      waveEnergy: metrics.waveEnergy,
+      maxWave: Math.max(Math.abs(metrics.maxWave), Math.abs(metrics.minWave)),
+      objectCount: this.objects.length,
+      overflowDepth: this.overflowDepth,
+      presetLabel: this.currentWaterPreset.label,
+      density: metrics.density,
+    })
     this.composer.render()
   }
 
@@ -182,20 +229,6 @@ export class SceneApp {
     outline.position.y = TANK.height / 2
     wallGroup.add(outline)
     this.scene.add(wallGroup)
-
-    this.waterVolume = new THREE.Mesh(
-      new THREE.BoxGeometry(TANK.width - 0.1, TANK.waterLevel - 0.03, TANK.depth - 0.1),
-      new THREE.MeshPhysicalMaterial({
-        color: 0x0b8daf,
-        transparent: true,
-        opacity: 0.16,
-        roughness: 0.08,
-        transmission: 0.25,
-        depthWrite: false,
-      }),
-    )
-    this.waterVolume.position.y = TANK.waterLevel * 0.5
-    this.scene.add(this.waterVolume)
 
     this.addOverflowVisuals()
   }
@@ -352,7 +385,7 @@ export class SceneApp {
     const hasIntersection = validScreenPoint && this.raycaster.ray.intersectPlane(this.dropPlane, this.dropPoint)
     const x = hasIntersection ? this.dropPoint.x : 0
     const z = hasIntersection ? this.dropPoint.z : 0
-    const object = createFloatingObject(kind)
+    const object = createFloatingObject(kind, kind === 'custom' ? this.customMaterialOptions : undefined)
     const topLimit = TANK.height - object.definition.radius - TANK.wallThickness
     object.mesh.position.set(
       THREE.MathUtils.clamp(x, -TANK.width * 0.38, TANK.width * 0.38),
@@ -365,7 +398,8 @@ export class SceneApp {
 
   private reset(): void {
     this.water.reset()
-    this.updateWaterVolumeMesh(TANK.waterLevel)
+    this.underwater.update(1, TANK.waterLevel, 0)
+    this.splash.clear()
     this.updateOverflowVisuals(0, 1)
     for (const object of this.objects) {
       this.scene.remove(object.mesh)
@@ -474,19 +508,7 @@ export class SceneApp {
     const smoothing = 1 - Math.exp(-deltaTime * 2.8)
     const nextLevel = THREE.MathUtils.lerp(this.water.level, targetLevel, smoothing)
     this.water.setLevel(nextLevel)
-    this.updateWaterVolumeMesh(nextLevel)
     this.updateOverflowVisuals(targetOverflowDepth, deltaTime)
-  }
-
-  private updateWaterVolumeMesh(level: number): void {
-    if (!this.waterVolume) {
-      return
-    }
-
-    const baseHeight = TANK.waterLevel - 0.03
-    const height = Math.max(0.05, level - 0.03)
-    this.waterVolume.scale.y = height / baseHeight
-    this.waterVolume.position.y = height * 0.5
   }
 
   private updateOverflowVisuals(targetOverflowDepth: number, deltaTime: number): void {
@@ -523,6 +545,17 @@ export class SceneApp {
     this.renderer.setSize(width, height, false)
     this.composer.setSize(width, height)
     this.cameraController.resize(width / height)
+  }
+
+  private applyWaterPreset(id: WaterPresetId): void {
+    this.currentWaterPreset = this.water.setPreset(id)
+    this.underwater.setPreset(this.currentWaterPreset)
+    this.scene.background = new THREE.Color(this.currentWaterPreset.fogColor)
+    if (this.scene.fog instanceof THREE.Fog) {
+      this.scene.fog.color.setHex(this.currentWaterPreset.fogColor)
+      this.scene.fog.near = 10.5 - (this.currentWaterPreset.density - 1) * 3
+      this.scene.fog.far = 24 - (this.currentWaterPreset.density - 1) * 9
+    }
   }
 
   private postReady(): void {

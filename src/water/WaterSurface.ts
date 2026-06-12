@@ -2,18 +2,42 @@ import * as THREE from 'three'
 import { TANK, WATER } from '../utils/constants'
 import { clamp, lerp } from '../utils/math'
 import { createWaterMaterial } from './WaterMaterial'
+import { getWaterPreset, WaterPreset, WaterPresetId } from './WaterPresets'
+
+export interface WaterMetrics {
+  level: number
+  waveEnergy: number
+  maxWave: number
+  minWave: number
+  density: number
+}
 
 export class WaterSurface {
   public readonly mesh: THREE.Mesh<THREE.PlaneGeometry, THREE.ShaderMaterial>
 
   private readonly columns = WATER.columns
   private readonly rows = WATER.rows
+  private readonly config = {
+    damping: WATER.damping,
+    propagation: WATER.propagation,
+    idleWave: WATER.idleWave,
+    maxHeight: WATER.maxHeight,
+  }
   private readonly current: Float32Array
   private readonly previous: Float32Array
   private readonly next: Float32Array
   private readonly positions: THREE.BufferAttribute
+  private metrics: WaterMetrics = {
+    level: TANK.waterLevel,
+    waveEnergy: 0,
+    maxWave: 0,
+    minWave: 0,
+    density: 1,
+  }
   private time = 0
   private baseLevel = TANK.waterLevel
+  private rippleScale = 1
+  private preset = getWaterPreset('clear')
 
   constructor() {
     const geometry = new THREE.PlaneGeometry(
@@ -53,13 +77,41 @@ export class WaterSurface {
     return this.baseLevel
   }
 
+  get density(): number {
+    return this.preset.density
+  }
+
   setLevel(level: number): void {
     this.baseLevel = clamp(level, TANK.waterLevel, TANK.height - WATER.overflowMargin)
     this.mesh.position.y = this.baseLevel
+    this.metrics.level = this.baseLevel
+  }
+
+  setPreset(id: WaterPresetId): WaterPreset {
+    this.preset = getWaterPreset(id)
+    this.config.damping = this.preset.damping
+    this.config.propagation = this.preset.propagation
+    this.config.idleWave = this.preset.idleWave
+    this.config.maxHeight = this.preset.maxHeight
+    this.metrics.density = this.preset.density
+    this.mesh.material.uniforms.shallowColor.value.setHex(this.preset.shallowColor)
+    this.mesh.material.uniforms.deepColor.value.setHex(this.preset.deepColor)
+    this.mesh.material.uniforms.opacity.value = this.preset.opacity
+    this.mesh.material.uniforms.visualDensity.value = this.preset.density
+    return this.preset
+  }
+
+  setRippleScale(scale: number): void {
+    this.rippleScale = clamp(scale, 0.45, 1.8)
+    this.mesh.material.uniforms.rippleScale.value = this.rippleScale
+  }
+
+  setWireframe(enabled: boolean): void {
+    this.mesh.material.wireframe = enabled
   }
 
   disturb(worldX: number, worldZ: number, strength: number, radius: number): void {
-    const clampedStrength = clamp(strength, -0.26, 0.26)
+    const clampedStrength = clamp(strength * this.rippleScale, -0.32, 0.32)
     const gridX = ((worldX / TANK.width) + 0.5) * (this.columns - 1)
     const gridZ = ((worldZ / TANK.depth) + 0.5) * (this.rows - 1)
     const radiusX = Math.max(1, (radius / TANK.width) * this.columns)
@@ -79,8 +131,8 @@ export class WaterSurface {
           const i = this.index(x, z)
           this.current[i] = clamp(
             this.current[i] + clampedStrength * falloff,
-            -WATER.maxHeight,
-            WATER.maxHeight,
+            -this.config.maxHeight,
+            this.config.maxHeight,
           )
         }
       }
@@ -123,6 +175,10 @@ export class WaterSurface {
     this.mesh.material.dispose()
   }
 
+  getMetrics(): WaterMetrics {
+    return { ...this.metrics }
+  }
+
   private simulateStep(): void {
     for (let z = 1; z < this.rows - 1; z += 1) {
       for (let x = 1; x < this.columns - 1; x += 1) {
@@ -132,10 +188,10 @@ export class WaterSurface {
           this.current[this.index(x + 1, z)] +
           this.current[this.index(x, z - 1)] +
           this.current[this.index(x, z + 1)]
-        const wave = neighbors * WATER.propagation - this.previous[i]
+        const wave = neighbors * this.config.propagation - this.previous[i]
         const edgeFade =
           Math.min(x, z, this.columns - 1 - x, this.rows - 1 - z) < 3 ? 0.93 : 1
-        this.next[i] = clamp(wave * WATER.damping * edgeFade, -WATER.maxHeight, WATER.maxHeight)
+        this.next[i] = clamp(wave * this.config.damping * edgeFade, -this.config.maxHeight, this.config.maxHeight)
       }
     }
 
@@ -145,6 +201,9 @@ export class WaterSurface {
   }
 
   private writeGeometry(): void {
+    let energy = 0
+    let maxWave = -Infinity
+    let minWave = Infinity
     for (let z = 0; z < this.rows; z += 1) {
       for (let x = 0; x < this.columns; x += 1) {
         const vertex = this.index(x, z)
@@ -154,17 +213,30 @@ export class WaterSurface {
         const idle =
           Math.sin(localX * 2.2 + this.time * 1.1) *
           Math.cos(localZ * 2.9 - this.time * 0.8) *
-          WATER.idleWave
-        this.positions.array[positionIndex] = clamp(
+          this.config.idleWave *
+          this.rippleScale
+        const height = clamp(
           this.current[vertex] + idle,
-          -WATER.maxHeight,
-          WATER.maxHeight,
+          -this.config.maxHeight,
+          this.config.maxHeight,
         )
+        this.positions.array[positionIndex] = height
+        energy += Math.abs(this.current[vertex])
+        maxWave = Math.max(maxWave, height)
+        minWave = Math.min(minWave, height)
       }
     }
 
     this.positions.needsUpdate = true
     this.mesh.geometry.computeVertexNormals()
+    const cells = this.columns * this.rows
+    this.metrics = {
+      level: this.baseLevel,
+      waveEnergy: energy / cells,
+      maxWave,
+      minWave,
+      density: this.preset.density,
+    }
   }
 
   private index(x: number, z: number): number {

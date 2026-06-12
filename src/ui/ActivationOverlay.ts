@@ -32,7 +32,7 @@ export class ActivationOverlay {
         <div class="start-rule"></div>
         <div class="start-brief">
           <span>行动指令</span>
-          <strong>进入三维水体沙盒，投放物体，观察浮力、扰动与溢流。</strong>
+          <strong>进入三维水体沙箱，投放物体，观察浮力、扰动、折射与溢流。</strong>
         </div>
         <div class="start-actions">
           <button class="start-action is-primary" type="button" data-action="start">

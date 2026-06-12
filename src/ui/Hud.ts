@@ -5,7 +5,7 @@ export class Hud {
     this.element = document.createElement('section')
     this.element.className = 'hud'
     this.element.innerHTML = `
-      <div class="hud-title">3D 水体沙盒</div>
+      <div class="hud-title">3D 物理水体沙箱</div>
       <div class="hud-grid">
         <span>WASD</span><b>移动视角</b>
         <span>鼠标</span><b>观察 / 扰动水面</b>

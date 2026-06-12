@@ -4,6 +4,13 @@ import { clamp } from '../utils/math'
 import { WaterSurface } from '../water/WaterSurface'
 import { ObjectDefinition } from './ObjectTypes'
 
+export interface ObjectWaterImpact {
+  position: THREE.Vector3
+  radius: number
+  strength: number
+  speed: number
+}
+
 export class FloatingObject {
   public readonly velocity = new THREE.Vector3()
   public readonly angularVelocity = new THREE.Vector3(
@@ -27,7 +34,7 @@ export class FloatingObject {
     )
   }
 
-  update(deltaTime: number, water: WaterSurface): void {
+  update(deltaTime: number, water: WaterSurface): ObjectWaterImpact | null {
     const position = this.mesh.position
     const radius = this.definition.radius
     const waterHeight = water.getHeightAt(position.x, position.z)
@@ -37,7 +44,7 @@ export class FloatingObject {
 
     let accelerationY = -9.8
     if (inWater) {
-      const density = this.definition.density
+      const density = this.definition.density / water.density
       const waveVelocity = water.getVelocityAt(position.x, position.z)
       const damping = Math.pow(this.definition.drag, deltaTime * 60)
       this.velocity.x *= damping
@@ -66,12 +73,20 @@ export class FloatingObject {
     this.constrainToTank()
 
     if (this.wasAboveWater && inWater) {
+      const impactStrength = this.definition.disturbanceStrength * clamp(Math.abs(this.velocity.y) * 0.6, 0.45, 1.25)
       water.disturb(
         position.x,
         position.z,
-        -this.definition.disturbanceStrength * clamp(Math.abs(this.velocity.y) * 0.6, 0.45, 1.25),
+        -impactStrength,
         radius * (2.2 + this.definition.mass * 0.12),
       )
+      this.wasAboveWater = !inWater
+      return {
+        position: position.clone(),
+        radius,
+        strength: clamp(impactStrength * 2.9 + this.definition.mass * 0.08, 0.16, 1.5),
+        speed: Math.abs(this.velocity.y),
+      }
     }
 
     this.disturbanceClock += deltaTime
@@ -86,6 +101,7 @@ export class FloatingObject {
     }
 
     this.wasAboveWater = !inWater
+    return null
   }
 
   constrainToTank(restitution = 0.34): void {
