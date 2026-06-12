@@ -11,7 +11,6 @@ import { InventoryBar } from '../ui/InventoryBar'
 import { MetricsPanel } from '../ui/MetricsPanel'
 import { TANK, WATER } from '../utils/constants'
 import { screenToNdc } from '../utils/math'
-import { SplashParticles } from '../water/SplashParticles'
 import { UnderwaterVisuals } from '../water/UnderwaterVisuals'
 import { getWaterPreset, WaterPreset, WaterPresetId } from '../water/WaterPresets'
 import { WaterSurface } from '../water/WaterSurface'
@@ -39,7 +38,6 @@ export class SceneApp {
   private readonly inventory: InventoryBar
   private readonly metricsPanel: MetricsPanel
   private readonly debugPanel: DebugPanel
-  private readonly splash: SplashParticles
   private readonly underwater: UnderwaterVisuals
   private readonly objects: FloatingObject[] = []
   private overflowGroup?: THREE.Group
@@ -83,8 +81,6 @@ export class SceneApp {
     this.scene.add(this.water.mesh)
     this.underwater = new UnderwaterVisuals(this.currentWaterPreset)
     this.scene.add(this.underwater.group)
-    this.splash = new SplashParticles()
-    this.scene.add(this.splash.points)
     this.addTank()
 
     this.cameraController = new CameraController(this.camera, this.renderer.domElement)
@@ -129,17 +125,13 @@ export class SceneApp {
 
     this.cameraController.update(deltaTime)
     for (const object of this.objects) {
-      const impact = object.update(deltaTime, this.water)
-      if (impact) {
-        this.splash.spawn(impact)
-      }
+      object.update(deltaTime, this.water)
     }
     this.resolveObjectCollisions()
     this.updateDisplacedWaterLevel(deltaTime)
     this.water.update(deltaTime)
     const metrics = this.water.getMetrics()
     this.underwater.update(deltaTime, this.water.level, metrics.waveEnergy)
-    this.splash.update(deltaTime)
     this.metricsPanel.update({
       waterLevel: metrics.level,
       waveEnergy: metrics.waveEnergy,
@@ -399,7 +391,6 @@ export class SceneApp {
   private reset(): void {
     this.water.reset()
     this.underwater.update(1, TANK.waterLevel, 0)
-    this.splash.clear()
     this.updateOverflowVisuals(0, 1)
     for (const object of this.objects) {
       this.scene.remove(object.mesh)
